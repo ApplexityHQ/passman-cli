@@ -14,3 +14,7 @@ rand = "0.8"
 
 rpassword = "7.3"
 anyhow = "1.0"
+
+ratatui = "0.26"
+crossterm = "0.27"
+
