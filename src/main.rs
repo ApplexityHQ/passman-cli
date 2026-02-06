@@ -1,29 +1,78 @@
+mod cli;
 mod crypto;
 mod models;
-mod vault;
 mod storage;
+mod vault;
 
+use clap::Parser;
 use std::path::Path;
 
-fn main() -> anyhow::Result<()> {
-    let path = Path::new("passwords.enc");
-    let master = "master123";
+use cli::Cli;
+use models::PasswordEntry;
 
+fn main() -> anyhow::Result<()> {
+    let cli = Cli::parse();
+    let path = Path::new("passwords.enc");
+
+    // Prompt master password
+    let master_password =
+        rpassword::prompt_password("Master password: ")?;
+
+    // Load or create vault
     let (mut vault, salt): (vault::Vault, [u8; 16]) = if path.exists() {
-        storage::load_vault(path, master)?
+        storage::load_vault(path, &master_password)?
     } else {
-        storage::create_new_vault(master)?
+        println!("No vault found. Creating new vault...");
+        storage::create_new_vault(&master_password)?
     };
 
-    vault.add_entry(models::PasswordEntry {
-        service: "github".into(),
-        username: "bhawesh".into(),
-        password: "super-secret".into(),
-    })?;
+    match cli.command {
+        // ADD
+        cli::Commands::Add { service, username } => {
+            let password =
+                rpassword::prompt_password("Service password: ")?;
 
-    storage::save_vault(path, &vault, master, &salt)?;
+            vault.add_entry(PasswordEntry {
+                service,
+                username,
+                password,
+            })?;
 
-    println!("Vault saved securely.");
+            storage::save_vault(path, &vault, &master_password, &salt)?;
+            println!("Entry added");
+        }
+
+        // GET
+        cli::Commands::Get { service } => {
+            match vault.get_entry(&service) {
+                Some(entry) => {
+                    println!("Service  : {}", entry.service);
+                    println!("Username : {}", entry.username);
+                    println!("Password : {}", entry.password);
+                }
+                None => println!("Service not found"),
+            }
+        }
+
+        // LIST
+        cli::Commands::List => {
+            let services = vault.list_services();
+            if services.is_empty() {
+                println!("Vault is empty");
+            } else {
+                for s in services {
+                    println!("{}", s);
+                }
+            }
+        }
+
+        // DELETE
+        cli::Commands::Delete { service } => {
+            vault.delete_entry(&service)?;
+            storage::save_vault(path, &vault, &master_password, &salt)?;
+            println!("Entry deleted");
+        }
+    }
 
     Ok(())
 }
