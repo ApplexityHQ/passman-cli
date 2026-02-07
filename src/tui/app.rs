@@ -9,17 +9,27 @@ pub enum Mode {
     ConfirmDelete,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum AddField {
+    Service,
+    Username,
+    Password,
+}
+
+
 pub struct App {
     pub vault: Vault,
     pub list_state: ListState,
     pub should_quit: bool,
     pub mode: Mode,
 
-    // temp buffers
+    // add form
     pub input_service: String,
     pub input_username: String,
     pub input_password: String,
+    pub add_field: AddField,
 }
+
 
 impl App {
     pub fn new(vault: Vault) -> Self {
@@ -34,6 +44,7 @@ impl App {
             input_service: String::new(),
             input_username: String::new(),
             input_password: String::new(),
+            add_field: AddField::Service,
         }
     }
 
@@ -64,5 +75,7 @@ impl App {
         self.input_service.clear();
         self.input_username.clear();
         self.input_password.clear();
+        self.add_field = AddField::Service;
     }
+
 }

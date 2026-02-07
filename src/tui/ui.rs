@@ -16,7 +16,7 @@ use ratatui::{
 
 use std::io::stdout;
 
-pub fn start(mut app: App) -> Result<()> {
+pub fn start(mut app: App) -> Result<App> {
     enable_raw_mode()?;
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen)?;
@@ -35,23 +35,39 @@ pub fn start(mut app: App) -> Result<()> {
 
             // LIST
             let services = app.vault.list_services();
-            let items: Vec<ListItem> =
-                services.iter().map(|s| ListItem::new(*s)).collect();
 
-            let list = List::new(items)
+            if services.is_empty() {
+                let empty = Paragraph::new(
+                    "🔐 Vault is empty\n\nPress 'a' to add a new entry\nPress 'q' to quit"
+                )
                 .block(Block::default().title("passman 🔐").borders(Borders::ALL))
-                .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
-                .highlight_symbol("> ");
+                .alignment(ratatui::layout::Alignment::Center);
 
-            f.render_stateful_widget(list, chunks[0], &mut app.list_state);
+                f.render_widget(empty, chunks[0]);
+            } else {
+                let items: Vec<ListItem> =
+                    services.iter().map(|s| ListItem::new(*s)).collect();
+
+                let list = List::new(items)
+                    .block(Block::default().title("passman 🔐").borders(Borders::ALL))
+                    .highlight_style(Style::default().add_modifier(Modifier::REVERSED))
+                    .highlight_symbol("> ");
+
+                f.render_stateful_widget(list, chunks[0], &mut app.list_state);
+            }
 
             // STATUS BAR
             let status = match app.mode {
-                Mode::Normal => "↑↓ navigate | Enter view | a add | d delete | q quit",
-                Mode::View => "Viewing entry (Esc to close)",
-                Mode::Add => "Add entry (type password, Enter to save)",
-                Mode::ConfirmDelete => "Delete entry? (y/n)",
+                Mode::Normal =>
+                    "NORMAL | ↑↓ navigate | Enter view | a add | d delete | q quit",
+                Mode::View =>
+                    "VIEW MODE | Esc to close",
+                Mode::Add =>
+                    "ADD MODE | Type password | Enter save | Esc cancel",
+                Mode::ConfirmDelete =>
+                    "CONFIRM DELETE | y confirm | n cancel",
             };
+
 
             f.render_widget(Paragraph::new(status), chunks[1]);
 
@@ -69,6 +85,18 @@ pub fn start(mut app: App) -> Result<()> {
                     }
                 }
             }
+
+        if app.mode == Mode::Add {
+            let form = Paragraph::new("🔥 ADD MODE ACTIVE 🔥\n\nType something.\nTab = next field\nEsc = cancel")
+                .block(
+                    Block::default()
+                        .title("ADD ENTRY")
+                        .borders(Borders::ALL)
+                );
+
+            f.render_widget(form, centered_rect(60, 40, size));
+        }
+
         })?;
 
         handle_events(&mut app)?;
@@ -81,7 +109,7 @@ pub fn start(mut app: App) -> Result<()> {
     disable_raw_mode()?;
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
-    Ok(())
+    Ok(app)
 }
 
 // helper
