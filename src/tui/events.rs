@@ -60,9 +60,11 @@ pub fn handle_events(app: &mut App) -> Result<()> {
                             username: app.input_username.clone(),
                             password: app.input_password.clone(),
                         });
+                    }                    
+                    if app.selected_service().is_some() {
+                        app.mode = Mode::View;
                     }
                     app.clear_inputs();
-                    app.mode = Mode::Normal;
                 }
 
                 KeyCode::Char(c) if c.is_ascii_graphic() => match app.add_field {

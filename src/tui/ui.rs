@@ -13,7 +13,7 @@ use ratatui::{
     style::{Style, Modifier},
     layout::{Layout, Constraint, Direction},
 };
-
+use std::time::Duration;
 use std::io::stdout;
 
 pub fn start(mut app: App) -> Result<App> {
@@ -23,6 +23,10 @@ pub fn start(mut app: App) -> Result<App> {
 
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+
+    while event::poll(Duration::from_millis(0))? {
+    let _ = event::read();
+    }
 
     loop {
         terminal.draw(|f| {
